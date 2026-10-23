@@ -33,8 +33,12 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy on Ubuntu Server (CI/CD Pipeline)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This project is configured with an automated GitHub Actions CI/CD pipeline to deploy directly to a fresh **Ubuntu Server (VPS)** using **PM2** and **Nginx**:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+- **Continuous Integration**: Runs type checks (`tsc --noEmit`) and build tests on every Pull Request or commit.
+- **Continuous Deployment**: When code is pushed/merged to `main`, GitHub Actions connects via SSH and restarts the app with zero downtime.
+
+👉 See the complete step-by-step setup guide: [**`CI_CD_SETUP_GUIDE.md`**](./CI_CD_SETUP_GUIDE.md).
+

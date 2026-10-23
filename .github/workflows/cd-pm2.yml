@@ -1,4 +1,4 @@
-name: CD - Deploy via SSH & PM2 (No Docker)
+name: CD - Deploy to Ubuntu Server via PM2
 
 on:
   push:
@@ -29,12 +29,12 @@ jobs:
         run: npm run build
 
   deploy-to-server:
-    name: Deploy to VPS (PM2)
+    name: Deploy to Ubuntu Server
     needs: validate-and-build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
-      - name: Execute remote deployment commands via SSH
+      - name: Execute deployment commands via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -43,33 +43,43 @@ jobs:
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
             set -e
-            echo "🚀 Starting Deployment on $(hostname)..."
+            echo "🚀 Connecting to $(hostname)..."
 
-            # 1. Navigate to project directory
+            # Ensure Node, npm, and PM2 are in PATH for non-login SSH session
+            export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+            if [ -d "$HOME/.nvm" ]; then
+              export NVM_DIR="$HOME/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            fi
+
             APP_DIR="${{ secrets.APP_DIR || '/var/www/my-app' }}"
+            echo "📂 Deploying to: $APP_DIR"
             cd $APP_DIR
 
-            # 2. Pull latest code from GitHub
-            echo "📥 Pulling latest code..."
+            # Ensure safe Git directory
+            git config --global --add safe.directory $APP_DIR
+
+            # Pull latest changes from GitHub
+            echo "📥 Fetching latest code..."
             git pull origin main
 
-            # 3. Install dependencies
-            echo "📦 Installing dependencies..."
+            # Install dependencies
+            echo "📦 Installing npm dependencies..."
             npm ci
 
-            # 4. Build Next.js application
-            echo "🏗️ Building Next.js..."
+            # Build production Next.js bundle
+            echo "🏗️ Building Next.js application..."
             npm run build
 
-            # 5. Reload PM2 with Zero-Downtime
-            echo "🔄 Reloading PM2 process..."
+            # Zero-downtime PM2 reload
+            echo "🔄 Reloading PM2 with zero downtime..."
             if pm2 describe next-front > /dev/null 2>&1; then
               pm2 reload ecosystem.config.js --update-env
             else
               pm2 start ecosystem.config.js
             fi
 
-            # 6. Save PM2 state for auto-restart on server reboot
+            # Save state for auto-reboot
             pm2 save
 
-            echo "✅ Deployment completed successfully without Docker!"
+            echo "🎉 Deployment successfully finished on Ubuntu server!"
